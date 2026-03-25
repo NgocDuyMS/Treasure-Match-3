@@ -1,0 +1,5 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Bạn có thể xóa hết các code mặc định khác của Next.js trong file này, chỉ giữ lại 3 dòng trên là đủ */
