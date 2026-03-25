@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Cell } from './Cell';
 import { Board as BoardData, Position } from '@/types/board';
-
+import { MoveSuggestion } from '@/ai/search';
 interface BoardProps {
   boardData: BoardData;
   onSwapRequest: (pos1: Position, pos2: Position) => void;
+  hintMove?: MoveSuggestion | null;
 }
 
-export const Board: React.FC<BoardProps> = ({ boardData, onSwapRequest }) => {
+export const Board: React.FC<BoardProps> = ({ boardData, onSwapRequest, hintMove }) => {
   const [selectedPos, setSelectedPos] = useState<Position | null>(null);
 
   const handleCellClick = (row: number, col: number) => {
@@ -38,16 +39,21 @@ export const Board: React.FC<BoardProps> = ({ boardData, onSwapRequest }) => {
         {boardData.map((row, rowIndex) =>
           row.map((cellData, colIndex) => {
             const isSelected = selectedPos?.row === rowIndex && selectedPos?.col === colIndex;
+            const isHinted = hintMove && (
+              (hintMove.pos1.row === rowIndex && hintMove.pos1.col === colIndex) ||
+              (hintMove.pos2.row === rowIndex && hintMove.pos2.col === colIndex)
+            );
+
             return (
               <Cell
                 key={cellData.id} 
                 data={cellData}
-                isSelected={isSelected}
+                isSelected={isSelected || !!isHinted}
                 onClick={() => handleCellClick(rowIndex, colIndex)}
               />
             );
           })
-        )}
+        )}  
       </div>
     </div>
   );

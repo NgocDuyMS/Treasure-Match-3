@@ -41,9 +41,29 @@ export const Cell: React.FC<{ data: CellType; onClick: () => void; isSelected?: 
         />
       )}
 
-      {/* Hiệu ứng xích */}
+      {/* HIỆU ỨNG OVERLAY: Đóng băng (Frozen) */}
+      {data.modifier === CellModifier.FROZEN && (
+        <div className="absolute inset-0 z-20 pointer-events-none w-full h-full">
+          <Image 
+            src="/assets/gems/frozen.png" // Đổi lại đúng đường dẫn ảnh của bạn
+            alt="Frozen" 
+            fill 
+            className="object-contain opacity-80 drop-shadow-md" 
+          />
+        </div>
+      )}
+
+      {/* HIỆU ỨNG OVERLAY: Bị xích (Chained) */}
       {data.modifier === CellModifier.CHAINED && (
-        <div style={{ position: 'absolute', fontSize: '24px', pointerEvents: 'none' }}>🔗</div>
+        <div className="absolute inset-0 z-20 pointer-events-none w-full h-full">
+          <Image 
+            src="/assets/gems/chained.png" // Đổi lại đúng đường dẫn ảnh của bạn
+            alt="Chained" 
+            fill 
+            className="object-contain opacity-80 drop-shadow-xl" 
+            
+          />
+        </div>
       )}
     </div>
   );
