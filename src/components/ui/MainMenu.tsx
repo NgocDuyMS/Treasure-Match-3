@@ -1,102 +1,191 @@
 // src/components/ui/MainMenu.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { useGameStore } from '@/store/gameStore';
+import { SettingsModal, ShopModal, DailyModal } from './Modals';
 
 export default function MainMenu() {
   const { setScreen, gold } = useGameStore();
+  const [activeModal, setActiveModal] = useState<'NONE' | 'SETTINGS' | 'SHOP' | 'DAILY'>('NONE');
+
+  const cleanBtnStyle: React.CSSProperties = {
+    background: 'transparent',
+    backgroundColor: 'transparent',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+    outline: 'none',
+    WebkitAppearance: 'none',
+    appearance: 'none',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    transition: 'transform 0.2s'
+  };
+
+  // FIX #3: Hàm đóng modal và reset mọi trạng thái phụ nếu cần
+  const closeModal = () => setActiveModal('NONE');
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-sky-200">
-      
-      {/* 1. LỚP BACKGROUND - Fix style cứng để đảm bảo phủ kín màn hình */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
-        <Image 
-          src="/assets/ui/Background.png" // Đã khớp với ảnh trong VS Code của bạn
-          alt="Background" 
-          fill 
-          style={{ objectFit: 'cover' }} 
-          priority 
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+
+      {/* 1. LỚP BACKGROUND */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}>
+        <Image
+          src="/assets/ui/Background.png"
+          alt="Background"
+          fill
+          style={{ objectFit: 'cover' }}
+          priority
         />
       </div>
 
-      {/* 2. TOP BAR */}
-      <div className="absolute top-0 left-0 w-full flex justify-between items-start p-4 z-10">
-        
-        {/* Góc trái: Profile */}
-        <div className="cursor-pointer hover:scale-105 transition-transform drop-shadow-lg relative">
-          <Image src="/assets/ui/profile.png" alt="Profile" width={80} height={80} />
-          <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full border-2 border-white">!</span>
-        </div>
+      {/* FIX #4: BACKDROP — click ra ngoài modal để đóng */}
+      {activeModal !== 'NONE' && (
+        <div
+          onClick={closeModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            background: 'rgba(0,0,0,0.5)',
+          }}
+        />
+      )}
+
+      {/* 2. TOP BAR (Profile - Shop - Settings) */}
+      {/* FIX #1: Bỏ onClick khỏi div bao ngoài, chuyển vào đúng từng button */}
+      <div style={{
+        position: 'absolute', top: '20px', left: '20px', right: '20px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 10
+      }}>
+
+        {/* Góc trái: Profile — không mở modal, chỉ hover effect */}
+        <button
+          style={cleanBtnStyle}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Image src="/assets/ui/profile.png" alt="Profile" width={80} height={80} style={{ objectFit: 'contain', background: 'transparent' }} />
+        </button>
 
         {/* Ở giữa: Shop & Vàng */}
-        <div className="flex flex-col items-center gap-2 mt-2 cursor-pointer hover:scale-105 transition-transform">
-          <div className="drop-shadow-lg">
-            <Image src="/assets/ui/shop-icon.png" alt="Shop" width={64} height={64} />
-          </div>
-          <div className="bg-black/40 backdrop-blur-sm border-2 border-yellow-400 rounded-full px-4 py-1 flex items-center gap-2 shadow-inner">
-            <Image src="/assets/ui/coin.png" alt="Coin" width={24} height={24} />
-            <span className="text-yellow-400 font-black text-lg drop-shadow-md">{gold}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+          {/* FIX #1: onClick đặt đúng vào button Shop */}
+          <button
+            onClick={() => setActiveModal('SHOP')}
+            style={cleanBtnStyle}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <Image src="/assets/ui/shop-icon.png" alt="Shop" width={70} height={70} style={{ objectFit: 'contain', background: 'transparent' }} />
+          </button>
+
+          {/* Thanh hiển thị Vàng */}
+          <div style={{
+            backgroundColor: 'rgba(0,0,0,0.5)', border: '2px solid #fbbf24', borderRadius: '20px',
+            padding: '4px 16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'white', fontWeight: 'bold'
+          }}>
+            <Image src="/assets/ui/coin.png" alt="Coin" width={20} height={20} style={{ background: 'transparent' }} />
+            <span>{gold}</span>
           </div>
         </div>
 
-        {/* Góc phải: Nút Settings */}
-        <div className="cursor-pointer hover:rotate-90 transition-transform duration-300 drop-shadow-lg">
-          <Image src="/assets/ui/settings-icon.png" alt="Settings" width={64} height={64} />
-        </div>
-
-      </div>
-
-      {/* 3. LEFT PANEL */}
-      <div className="absolute left-4 top-1/3 flex flex-col gap-6 z-10">
-        <button className="hover:scale-110 transition-transform drop-shadow-lg animate-bounce">
-          <Image src="/assets/ui/no-ads.png" alt="No Ads" width={64} height={64} />
-        </button>
-        <button className="hover:scale-110 transition-transform drop-shadow-lg flex flex-col items-center relative">
-          <Image src="/assets/ui/GoldenChess.png" alt="Time Chest" width={64} height={64} />
-          <span className="absolute -bottom-4 bg-orange-600 text-white text-xs font-bold px-2 rounded-md border border-orange-300 shadow-md whitespace-nowrap">
-            15:00
-          </span>
-        </button>
-      </div>
-
-      {/* 4. RIGHT PANEL */}
-      <div className="absolute right-4 top-1/3 flex flex-col gap-6 z-10 items-end">
-        <button className="hover:scale-110 transition-transform drop-shadow-lg">
-          <Image src="/assets/ui/lucky-spin.png" alt="Lucky Spin" width={64} height={64} />
-        </button>
-        <button className="hover:scale-110 transition-transform drop-shadow-lg flex flex-col items-center relative">
-          <Image src="/assets/ui/daily-chess.png" alt="Daily Chest" width={64} height={64} />
-          <span className="absolute -bottom-4 bg-green-600 text-white text-xs font-bold px-2 rounded-md border border-green-300 shadow-md whitespace-nowrap">
-            FREE
-          </span>
-        </button>
-      </div>
-
-      {/* 5. CENTER (Nút Play) */}
-      <div className="absolute inset-0 flex items-center justify-center mt-32 z-10">
-        <button 
-          onClick={() => setScreen('PLAY')}
-          className="relative drop-shadow-2xl hover:brightness-110 active:scale-95 transition-all heart-beat"
+        {/* Góc phải: Settings */}
+        {/* FIX #3: onClick + onMouseOut đồng thời reset transform để tránh kẹt rotate */}
+        <button
+          onClick={() => setActiveModal('SETTINGS')}
+          style={cleanBtnStyle}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'rotate(90deg)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
         >
-          <Image src="/assets/ui/play-btn.png" alt="Play Game" width={220} height={100} />
+          <Image src="/assets/ui/settings-icon.png" alt="Settings" width={60} height={60} style={{ objectFit: 'contain', background: 'transparent' }} />
+        </button>
+
+      </div>
+
+      {/* 3. LEFT PANEL (No Ads, Time Chest) */}
+      <div style={{ position: 'absolute', left: '20px', top: '45%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '30px', zIndex: 10 }}>
+        <button
+          style={cleanBtnStyle}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Image src="/assets/ui/no-ads.png" alt="No Ads" width={70} height={70} style={{ objectFit: 'contain', background: 'transparent' }} />
+        </button>
+
+        <button
+          style={cleanBtnStyle}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Image src="/assets/ui/GoldenChess.png" alt="Time Chest" width={70} height={70} style={{ objectFit: 'contain', background: 'transparent' }} />
+          <span style={{
+            position: 'absolute', bottom: '-15px', backgroundColor: '#ea580c', color: 'white',
+            fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '5px', border: '1px solid #fdba74'
+          }}>15:00</span>
+        </button>
+      </div>
+
+      {/* 4. RIGHT PANEL (Lucky Spin, Daily Chest) */}
+      <div style={{ position: 'absolute', right: '20px', top: '45%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '30px', zIndex: 10 }}>
+        <button
+          style={cleanBtnStyle}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Image src="/assets/ui/lucky-spin.png" alt="Lucky Spin" width={70} height={70} style={{ objectFit: 'contain', background: 'transparent' }} />
+          <span style={{
+            position: 'absolute', bottom: '-15px', backgroundColor: '#ea580c', color: 'white',
+            fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '5px', border: '1px solid #fdba74'
+          }}>2/5</span>
+        </button>
+
+        {/* FIX #2: onClick chuyển lên button thay vì span FREE */}
+        <button
+          onClick={() => setActiveModal('DAILY')}
+          style={cleanBtnStyle}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Image src="/assets/ui/daily-chess.png" alt="Daily Chest" width={70} height={70} style={{ objectFit: 'contain', background: 'transparent' }} />
+          <span style={{
+            position: 'absolute', bottom: '-15px', backgroundColor: '#16a34a', color: 'white',
+            fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '5px', border: '1px solid #86efac'
+          }}>FREE</span>
+        </button>
+      </div>
+
+      {/* 5. CENTER — Nút Play */}
+      <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+        <button
+          onClick={() => setScreen('PLAY')}
+          style={{ ...cleanBtnStyle, animation: 'heartbeat 2s infinite' }}
+        >
+          <Image src="/assets/ui/play-btn.png" alt="Play Game" width={220} height={100} style={{ objectFit: 'contain', background: 'transparent' }} />
         </button>
       </div>
 
       {/* CSS Animation */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes heartbeat {
-          0% { transform: scale(1); }
-          15% { transform: scale(1.08); }
+          0%  { transform: scale(1); }
+          15% { transform: scale(1.08); filter: brightness(1.1); }
           30% { transform: scale(1); }
-          45% { transform: scale(1.08); }
+          45% { transform: scale(1.08); filter: brightness(1.1); }
           60% { transform: scale(1); }
-          100% { transform: scale(1); }
+          100%{ transform: scale(1); }
         }
-        .heart-beat {
-          animation: heartbeat 2s infinite;
+        img {
+          background: transparent !important;
         }
       `}} />
+
+      {/* FIX #5: zIndex modal phải cao hơn backdrop (50) và cao hơn mọi panel (10) */}
+      {activeModal === 'SETTINGS' && <SettingsModal onClose={closeModal} />}
+      {activeModal === 'SHOP'     && <ShopModal     onClose={closeModal} />}
+      {activeModal === 'DAILY'    && <DailyModal    onClose={closeModal} />}
 
     </div>
   );

@@ -8,9 +8,13 @@ import { findMatches, removeMatches } from "@/core/match";
 import { applyGravity } from "@/core/gravity";
 import { findBestMove, MoveSuggestion } from '@/ai/search';
 import { shuffleBoard } from '@/core/shuffle';
+import { PauseModal, SettingsModal } from '../ui/Modals';
+import { useGameStore } from '@/store/gameStore';
 
 
 export default function GamePlay() {
+  const { setScreen, isPaused, setPaused } = useGameStore();
+  const [showSettings, setShowSettings] = useState(false);
   const [board, setBoard] = useState<BoardData | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
@@ -34,6 +38,7 @@ export default function GamePlay() {
   };
 
   useEffect(() => {
+    setPaused(false); 
     const newBoard = createInitialBoard(8, 8); // Tạo bàn 8x8
     setBoard(newBoard);
   }, []);
@@ -101,7 +106,7 @@ export default function GamePlay() {
   };
   // Xử lý khi người chơi yêu cầu swap (đổi chỗ)
   const handleSwapRequest = (pos1: Position, pos2: Position) => {
-    if (!board || isProcessing) return;
+    if (!board || isProcessing || isPaused) return;
     if (!canSwap(board, pos1, pos2)) return;
     setHintMove(null);
     setIsProcessing(true);
@@ -124,120 +129,139 @@ export default function GamePlay() {
       }, 0);      
     }
   };
+  const restartGame = () => {
+    setIsProcessing(false);
+    setBoard(createInitialBoard(8, 8));
+    setScore(0);
+    setPaused(false);
+  };
+
 
   return (
-    <main
+  <main
+    style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundImage: "url(/background.jpeg)",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      position: "relative", // ✅ Thêm để các nút absolute định vị đúng
+    }}
+  >
+
+    {/* NÚT PAUSE VÀ SETTINGS Ở GÓC TRÊN PHẢI */}
+    <div style={{
+      position: 'absolute', top: '20px', right: '20px',
+      display: 'flex', gap: '15px', zIndex: 10
+    }}>
+      <button
+        onClick={() => setPaused(true)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '40px' }}
+      >⏸️</button>
+      <button
+        onClick={() => setShowSettings(true)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '40px' }}
+      >⚙️</button>
+    </div>
+
+    <h1
       style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundImage: "url(/background.jpeg)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
+        fontSize: "2.5rem",
+        fontWeight: "bold",
+        color: "white",
+        marginBottom: "32px",
+        letterSpacing: "2px",
       }}
     >
-      <h1
+      TREASURE MATCH <span style={{ color: "#22d3ee" }}> 3 </span>
+    </h1>
+
+    {/* KHU VỰC ĐIỂM SỐ VÀ NÚT BẤM */}
+    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px' }}>
+      <div
         style={{
-          fontSize: "2.5rem",
-          fontWeight: "bold",
-          color: "white",
-          marginBottom: "32px",
-          letterSpacing: "2px",
+          background: "linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(15, 10, 30, 0.9) 100%)",
+          padding: "10px 30px",
+          borderRadius: "12px",
+          border: "2px solid rgba(251, 191, 36, 0.6)",
+          boxShadow: "0 0 20px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
         }}
       >
-        TREASURE MATCH <span style={{ color: "#22d3ee" }}> 3 </span>
-      </h1>
- 
-      {/* KHU VỰC ĐIỂM SỐ VÀ NÚT BẤM */}
-      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px' }}>
-        <div
+        <span
           style={{
-            background:
-              "linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(15, 10, 30, 0.9) 100%)",
-            padding: "10px 30px",
-            borderRadius: "12px",
-            border: "2px solid rgba(251, 191, 36, 0.6)",
-            boxShadow:
-              "0 0 20px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
+            color: "#e2e8f0",
+            fontSize: "1rem",
+            marginRight: "10px",
+            fontFamily: '"Orbitron", "Courier New", monospace',
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            textShadow: "0 0 8px rgba(255,255,255,0.3)",
           }}
         >
-          <span
-            style={{
-              color: "#e2e8f0",
-              fontSize: "1rem",
-              marginRight: "10px",
-              fontFamily: '"Orbitron", "Courier New", monospace',
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              fontWeight: 600,
-              textShadow: "0 0 8px rgba(255,255,255,0.3)",
-            }}
-          >
-            SCORE:
-          </span>
-          <span
-            style={{
-              color: "#fbbf24",
-              fontSize: "1.8rem",
-              fontWeight: "bold",
-              fontFamily: '"Orbitron", "Courier New", monospace',
-              textShadow:
-                "0 0 12px rgba(251, 191, 36, 0.8), 0 0 24px rgba(251, 191, 36, 0.4)",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {score}
-          </span>
-        </div>
- 
-        {/* Nút bấm AI */}
-        <button
-          onClick={handleGetHint}
-          disabled={isProcessing}
+          SCORE:
+        </span>
+        <span
           style={{
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '20px',
-            fontSize: '1.1rem',
-            fontWeight: 'bold',
-            cursor: isProcessing ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.5)',
-            transition: 'all 0.2s',
-            opacity: isProcessing ? 0.6 : 1,
+            color: "#fbbf24",
+            fontSize: "1.8rem",
+            fontWeight: "bold",
+            fontFamily: '"Orbitron", "Courier New", monospace',
+            textShadow: "0 0 12px rgba(251, 191, 36, 0.8), 0 0 24px rgba(251, 191, 36, 0.4)",
+            letterSpacing: "0.05em",
           }}
         >
-          💡 GỢI Ý (AI)
-        </button>
-
-        {/* NÚT MỚI: BẬT/TẮT AUTO-BOT */}
-        <button 
-          onClick={() => setIsAutoBotEnabled(!isAutoBotEnabled)}
-          style={{
-            // Nếu Bot đang bật thì nút màu Đỏ (để tắt), nếu đang tắt thì nút màu Xanh lá
-            backgroundColor: isAutoBotEnabled ? '#ef4444' : '#10b981', 
-            color: 'white', border: 'none', padding: '12px 20px',
-            borderRadius: '20px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
-            boxShadow: `0 4px 6px -1px ${isAutoBotEnabled ? 'rgba(239, 68, 68, 0.5)' : 'rgba(16, 185, 129, 0.5)'}`, 
-            transition: 'all 0.2s'
-          }}
-        >
-          {isAutoBotEnabled ? '🛑 DỪNG BOT' : '🤖 BẬT AUTO-BOT'}
-        </button>
-
+          {score}
+        </span>
       </div>
- 
-      {board ? (
-        <Board boardData={board} onSwapRequest={handleSwapRequest} hintMove={hintMove} />
-      ) : (
-        <div style={{ color: "#22d3ee", fontSize: "1.25rem" }}>
-          Đang tải kho báu...
+
+      {/* Nút gợi ý AI */}
+      <button
+        onClick={handleGetHint}
+        disabled={isProcessing}
+        style={{
+          backgroundColor: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          padding: '12px 24px',
+          borderRadius: '20px',
+          fontSize: '1.1rem',
+          fontWeight: 'bold',
+          cursor: isProcessing ? 'not-allowed' : 'pointer',
+          boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.5)',
+          transition: 'all 0.2s',
+          opacity: isProcessing ? 0.6 : 1,
+        }}
+      >
+        💡 GỢI Ý (AI)
+      </button>
+
+      {/* Nút Auto-Bot */}
+      <button
+        onClick={() => setIsAutoBotEnabled(!isAutoBotEnabled)}
+        style={{
+          backgroundColor: isAutoBotEnabled ? '#ef4444' : '#10b981',
+          color: 'white', border: 'none', padding: '12px 20px',
+          borderRadius: '20px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
+          boxShadow: `0 4px 6px -1px ${isAutoBotEnabled ? 'rgba(239, 68, 68, 0.5)' : 'rgba(16, 185, 129, 0.5)'}`,
+          transition: 'all 0.2s'
+        }}
+      >
+        {isAutoBotEnabled ? '🛑 DỪNG BOT' : '🤖 BẬT AUTO-BOT'}
+      </button>
+    </div>
+
+    {board ? (
+      <Board boardData={board} onSwapRequest={handleSwapRequest} hintMove={hintMove} />
+    ) : (
+      <div style={{ color: "#22d3ee", fontSize: "1.25rem" }}>
+        Đang tải kho báu...
         </div>
       )}
     </main>
