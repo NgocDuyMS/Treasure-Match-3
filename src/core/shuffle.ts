@@ -23,7 +23,7 @@ export const shuffleBoard = (board: Board): Board => {
         }
       }
     }
-
+    // sieu dang cap 
     // 2. Thuật toán Fisher-Yates xáo trộn mảng cực nhanh
     for (let i = movableCells.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
