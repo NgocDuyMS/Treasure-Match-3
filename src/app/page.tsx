@@ -7,6 +7,8 @@ import { canSwap, isAdjacent, swapGems } from "@/core/swap";
 import { findMatches, removeMatches } from "@/core/match";
 import { applyGravity } from "@/core/gravity";
 import { findBestMove, MoveSuggestion } from '@/ai/search';
+import { shuffleBoard } from '@/core/shuffle';
+
 
 export default function Home() {
   const [board, setBoard] = useState<BoardData | null>(null);
