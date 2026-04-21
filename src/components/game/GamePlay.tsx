@@ -6,30 +6,34 @@ import { createInitialBoard } from "@/core/board";
 import { canSwap, isAdjacent, swapGems } from "@/core/swap";
 import { findMatches, removeMatches } from "@/core/match";
 import { applyGravity } from "@/core/gravity";
-import { findBestMove, MoveSuggestion } from '@/ai/search';
-import { shuffleBoard } from '@/core/shuffle';
-import { PauseModal, SettingsModal } from '../ui/Modals';
-import { useGameStore } from '@/store/gameStore';
-
+import { findBestMove, MoveSuggestion } from "@/ai/search";
+import { shuffleBoard } from "@/core/shuffle";
+import { PauseModal, SettingsModal } from "../ui/Modals";
+import { useGameStore } from "@/store/gameStore";
 
 export default function GamePlay() {
   const { setScreen, isPaused, setPaused } = useGameStore();
-  const [showSettings, setShowSettings] = useState(false);
+  // const [showSettings, setShowSettings] = useState(false);
+  const [activeGameModal, setActiveGameModal] = useState<
+    "NONE" | "PAUSE" | "SETTINGS"
+  >("NONE");
   const [board, setBoard] = useState<BoardData | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
   const [hintMove, setHintMove] = useState<MoveSuggestion | null>(null);
-  const [isAutoBotEnabled, setIsAutoBotEnabled] = useState<boolean>(false); // cong tac bat tat auto bot 
+  const [isAutoBotEnabled, setIsAutoBotEnabled] = useState<boolean>(false); // cong tac bat tat auto bot
 
   // Hàm xử lý xin gợi ý
   const handleGetHint = () => {
     if (!board || isProcessing) return;
-    
+
     const bestMove = findBestMove(board);
     if (bestMove) {
-      console.log(`AI Gợi ý: Đổi (${bestMove.pos1.row}, ${bestMove.pos1.col}) với (${bestMove.pos2.row}, ${bestMove.pos2.col}) - Điểm kì vọng: ${bestMove.score}`);
+      console.log(
+        `AI Gợi ý: Đổi (${bestMove.pos1.row}, ${bestMove.pos1.col}) với (${bestMove.pos2.row}, ${bestMove.pos2.col}) - Điểm kì vọng: ${bestMove.score}`,
+      );
       setHintMove(bestMove);
-      
+
       // Tự động tắt hiệu ứng gợi ý sau 3 giây
       setTimeout(() => setHintMove(null), 3000);
     } else {
@@ -38,37 +42,39 @@ export default function GamePlay() {
   };
 
   useEffect(() => {
-    setPaused(false); 
+    setPaused(false);
     const newBoard = createInitialBoard(8, 8); // Tạo bàn 8x8
     setBoard(newBoard);
   }, []);
 
-  // theo doi trang thai ban co 
+  // theo doi trang thai ban co
   useEffect(() => {
     // Nếu Bot đang được Bật, và hệ thống ĐANG RẢNH (không vỡ đá, rơi đá), và đã có bàn cờ
-    if (isAutoBotEnabled && !isProcessing && board) {
-      
+    if (isAutoBotEnabled && !isProcessing && board && !isPaused && board) {
       // Cho bot đợi 1 giây trước khi đi nước tiếp theo (Để thầy cô/người chơi kịp nhìn)
       const botTimer = setTimeout(() => {
         const bestMove = findBestMove(board);
-        
         if (bestMove) {
-          console.log(`🤖 BOT ĐANG CHƠI: Đổi (${bestMove.pos1.row}, ${bestMove.pos1.col}) với (${bestMove.pos2.row}, ${bestMove.pos2.col})`);
-          
+          console.log(
+            `🤖 BOT ĐANG CHƠI: Đổi (${bestMove.pos1.row}, ${bestMove.pos1.col}) với (${bestMove.pos2.row}, ${bestMove.pos2.col})`,
+          );
+
           // Tự động kích hoạt hàm hoán đổi y hệt như người chơi click chuột
           handleSwapRequest(bestMove.pos1, bestMove.pos2);
         } else {
           // Bế tắc (Deadlock)
           console.log("🤖 BOT BÓ TAY: Đã hết nước đi hợp lệ trên bàn cờ!");
           setIsAutoBotEnabled(false); // Tự động tắt Bot
-          alert("Bàn cờ đã bế tắc (Deadlock)! Cần thuật toán Xáo trộn (Shuffle) ở bước sau.");
+          alert(
+            "Bàn cờ đã bế tắc (Deadlock)! Cần thuật toán Xáo trộn (Shuffle) ở bước sau.",
+          );
         }
       }, 1000); // 1000ms = 1 giây delay
 
       // Cleanup function để tránh việc Bot đi lung tung nếu component render lại
       return () => clearTimeout(botTimer);
     }
-  }, [isAutoBotEnabled, isProcessing, board]);
+  }, [isAutoBotEnabled, isProcessing, isPaused, board]);
 
   // HÀM MỚI: Đệ quy xử lý các chuỗi Combo liên tiếp
   const processCombos = (currentBoard: BoardData, comboMultiplier: number) => {
@@ -76,7 +82,17 @@ export default function GamePlay() {
 
     // ĐIỀU KIỆN DỪNG ĐỆ QUY: Không còn chuỗi nào nữa
     if (matches.length === 0) {
-      setIsProcessing(false); // Mở khóa bàn phím cho người chơi đi lượt tiếp theo
+      const nextBestMove = findBestMove(currentBoard);
+      if (!nextBestMove) {
+        setTimeout(() => {
+          const shuffledBoard = shuffleBoard(currentBoard);
+          setBoard(shuffledBoard);
+          setIsProcessing(false);
+          alert("Hết nước đi! Bàn cờ đã được xáo trộn tự động 🌪️");
+        }, 800);
+      } else {
+        setIsProcessing(false);
+      }
       return;
     }
 
@@ -121,148 +137,216 @@ export default function GamePlay() {
         setIsProcessing(false); // Mở khóa tương tác
       }, 400);
     } else {
-      // TRƯỜNG HỢP 2: CÓ CHUỖI (Nước đi đúng)
-
       setBoard(tempBoard); // Chốt bàn cờ mới
       setTimeout(() => {
         processCombos(tempBoard, 1); // Bắt đầu chuỗi với hệ số Combo x1
-      }, 0);      
+      }, 0);
     }
   };
   const restartGame = () => {
-    setIsProcessing(false);
     setBoard(createInitialBoard(8, 8));
     setScore(0);
     setPaused(false);
+    setActiveGameModal("NONE");
   };
 
-
   return (
-  <main
-    style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundImage: "url(/background.jpeg)",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-      position: "relative", // ✅ Thêm để các nút absolute định vị đúng
-    }}
-  >
-
-    {/* NÚT PAUSE VÀ SETTINGS Ở GÓC TRÊN PHẢI */}
-    <div style={{
-      position: 'absolute', top: '20px', right: '20px',
-      display: 'flex', gap: '15px', zIndex: 10
-    }}>
-      <button
-        onClick={() => setPaused(true)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '40px' }}
-      >⏸️</button>
-      <button
-        onClick={() => setShowSettings(true)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '40px' }}
-      >⚙️</button>
-    </div>
-
-    <h1
+    <main
       style={{
-        fontSize: "2.5rem",
-        fontWeight: "bold",
-        color: "white",
-        marginBottom: "32px",
-        letterSpacing: "2px",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundImage: "url(/background.jpeg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        position: "relative", // ✅ Thêm để các nút absolute định vị đúng
       }}
     >
-      TREASURE MATCH <span style={{ color: "#22d3ee" }}> 3 </span>
-    </h1>
-
-    {/* KHU VỰC ĐIỂM SỐ VÀ NÚT BẤM */}
-    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px' }}>
+      {/* NÚT PAUSE VÀ SETTINGS Ở GÓC TRÊN PHẢI */}
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(15, 10, 30, 0.9) 100%)",
-          padding: "10px 30px",
-          borderRadius: "12px",
-          border: "2px solid rgba(251, 191, 36, 0.6)",
-          boxShadow: "0 0 20px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+          position: "absolute",
+          top: "20px",
+          right: "20px",
+          display: "flex",
+          gap: "15px",
+          zIndex: 10,
         }}
       >
-        <span
+        <button
+          // Khi bấm Pause -> Dừng game VÀ Mở bảng Pause
+          onClick={() => {
+            setPaused(true);
+            setActiveGameModal("PAUSE");
+          }}
           style={{
-            color: "#e2e8f0",
-            fontSize: "1rem",
-            marginRight: "10px",
-            fontFamily: '"Orbitron", "Courier New", monospace',
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            fontWeight: 600,
-            textShadow: "0 0 8px rgba(255,255,255,0.3)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "40px",
+            filter: "drop-shadow(2px 4px 6px black)",
           }}
         >
-          SCORE:
-        </span>
-        <span
+          ⏸️
+        </button>
+        <button
+          // Khi bấm Settings -> Dừng game VÀ Mở bảng Settings
+          onClick={() => {
+            setPaused(true);
+            setActiveGameModal("SETTINGS");
+          }}
           style={{
-            color: "#fbbf24",
-            fontSize: "1.8rem",
-            fontWeight: "bold",
-            fontFamily: '"Orbitron", "Courier New", monospace',
-            textShadow: "0 0 12px rgba(251, 191, 36, 0.8), 0 0 24px rgba(251, 191, 36, 0.4)",
-            letterSpacing: "0.05em",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "40px",
+            filter: "drop-shadow(2px 4px 6px black)",
           }}
         >
-          {score}
-        </span>
+          ⚙️
+        </button>
       </div>
 
-      {/* Nút gợi ý AI */}
-      <button
-        onClick={handleGetHint}
-        disabled={isProcessing}
+      <h1
         style={{
-          backgroundColor: '#3b82f6',
-          color: 'white',
-          border: 'none',
-          padding: '12px 24px',
-          borderRadius: '20px',
-          fontSize: '1.1rem',
-          fontWeight: 'bold',
-          cursor: isProcessing ? 'not-allowed' : 'pointer',
-          boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.5)',
-          transition: 'all 0.2s',
-          opacity: isProcessing ? 0.6 : 1,
+          fontSize: "2.5rem",
+          fontWeight: "bold",
+          color: "white",
+          marginBottom: "32px",
+          letterSpacing: "2px",
         }}
       >
-        💡 GỢI Ý (AI)
-      </button>
+        TREASURE MATCH <span style={{ color: "#22d3ee" }}> 3 </span>
+      </h1>
 
-      {/* Nút Auto-Bot */}
-      <button
-        onClick={() => setIsAutoBotEnabled(!isAutoBotEnabled)}
+      {/* KHU VỰC ĐIỂM SỐ VÀ NÚT BẤM */}
+      <div
         style={{
-          backgroundColor: isAutoBotEnabled ? '#ef4444' : '#10b981',
-          color: 'white', border: 'none', padding: '12px 20px',
-          borderRadius: '20px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
-          boxShadow: `0 4px 6px -1px ${isAutoBotEnabled ? 'rgba(239, 68, 68, 0.5)' : 'rgba(16, 185, 129, 0.5)'}`,
-          transition: 'all 0.2s'
+          display: "flex",
+          gap: "20px",
+          alignItems: "center",
+          marginBottom: "24px",
         }}
       >
-        {isAutoBotEnabled ? '🛑 DỪNG BOT' : '🤖 BẬT AUTO-BOT'}
-      </button>
-    </div>
-
-    {board ? (
-      <Board boardData={board} onSwapRequest={handleSwapRequest} hintMove={hintMove} />
-    ) : (
-      <div style={{ color: "#22d3ee", fontSize: "1.25rem" }}>
-        Đang tải kho báu...
+        <div
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(15, 10, 30, 0.9) 100%)",
+            padding: "10px 30px",
+            borderRadius: "12px",
+            border: "2px solid rgba(251, 191, 36, 0.6)",
+            boxShadow:
+              "0 0 20px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
+        >
+          <span
+            style={{
+              color: "#e2e8f0",
+              fontSize: "1rem",
+              marginRight: "10px",
+              fontFamily: '"Orbitron", "Courier New", monospace',
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+              textShadow: "0 0 8px rgba(255,255,255,0.3)",
+            }}
+          >
+            SCORE:
+          </span>
+          <span
+            style={{
+              color: "#fbbf24",
+              fontSize: "1.8rem",
+              fontWeight: "bold",
+              fontFamily: '"Orbitron", "Courier New", monospace',
+              textShadow:
+                "0 0 12px rgba(251, 191, 36, 0.8), 0 0 24px rgba(251, 191, 36, 0.4)",
+              letterSpacing: "0.05em",
+            }}
+          >
+            {score}
+          </span>
         </div>
+
+        {/* Nút gợi ý AI */}
+        <button
+          onClick={handleGetHint}
+          disabled={isProcessing}
+          style={{
+            backgroundColor: "#3b82f6",
+            color: "white",
+            border: "none",
+            padding: "12px 24px",
+            borderRadius: "20px",
+            fontSize: "1.1rem",
+            fontWeight: "bold",
+            cursor: isProcessing ? "not-allowed" : "pointer",
+            boxShadow: "0 4px 6px -1px rgba(59, 130, 246, 0.5)",
+            transition: "all 0.2s",
+            opacity: isProcessing ? 0.6 : 1,
+          }}
+        >
+          💡 GỢI Ý (AI)
+        </button>
+
+        {/* Nút Auto-Bot */}
+        <button
+          onClick={() => setIsAutoBotEnabled(!isAutoBotEnabled)}
+          style={{
+            backgroundColor: isAutoBotEnabled ? "#ef4444" : "#10b981",
+            color: "white",
+            border: "none",
+            padding: "12px 20px",
+            borderRadius: "20px",
+            fontSize: "1.1rem",
+            fontWeight: "bold",
+            cursor: "pointer",
+            boxShadow: `0 4px 6px -1px ${isAutoBotEnabled ? "rgba(239, 68, 68, 0.5)" : "rgba(16, 185, 129, 0.5)"}`,
+            transition: "all 0.2s",
+          }}
+        >
+          {isAutoBotEnabled ? "🛑 DỪNG BOT" : "🤖 BẬT AUTO-BOT"}
+        </button>
+      </div>
+
+      {board ? (
+        <Board
+          boardData={board}
+          onSwapRequest={handleSwapRequest}
+          hintMove={hintMove}
+        />
+      ) : (
+        <div style={{ color: "#22d3ee", fontSize: "1.25rem" }}>
+          Đang tải kho báu...
+        </div>
+      )}
+      {activeGameModal === "PAUSE" && (
+        <PauseModal
+          onResume={() => {
+            setPaused(false);
+            setActiveGameModal("NONE");
+          }}
+          onRestart={restartGame}
+          onQuit={() => {
+            setPaused(false);
+            setScreen("MENU");
+          }}
+          onOpenSettings={() => setActiveGameModal("SETTINGS")} // Từ Pause bấm sang Settings
+          onOpenShop={() => alert("Chức năng Shop trong game đang phát triển!")}
+        />
+      )}
+      {activeGameModal === "SETTINGS" && (
+        <SettingsModal
+          onClose={() => {
+            // Khi đóng Setting, đưa về Pause Menu cho an toàn và logic
+            setActiveGameModal("PAUSE");
+          }}
+        />
       )}
     </main>
   );
