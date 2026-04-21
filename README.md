@@ -54,7 +54,6 @@ src/
 ├── ai/                # Não bộ của game
 │   ├── search.ts      # Duyệt không gian trạng thái tìm nước đi
 │   ├── heuristic.ts   # Hàm AI chấm điểm nước đi
-│   └── bot.ts         # Logic Auto-Bot
 ├── core/              # Động cơ vật lý & Luật chơi
 │   ├── board.ts       # Sinh bàn cờ an toàn
 │   ├── match.ts       # Nhận diện chuỗi & phá đá/băng
@@ -62,6 +61,6 @@ src/
 │   ├── swap.ts        # Thuật toán hoán đổi vị trí
 │   └── shuffle.ts     # Thuật toán Fisher-Yates xử lý Deadlock
 ├── components/        # Giao diện (UI)
-│   └── game/          # Board, Cell, Animations...
+│   └── game/          # Board, Cell, Animations, MainMenu, Modals.....
 └── types/             # Định nghĩa cấu trúc dữ liệu chặt chẽ
 ```
