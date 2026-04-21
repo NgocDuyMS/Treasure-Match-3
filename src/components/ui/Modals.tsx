@@ -560,11 +560,31 @@ export const SpinModal = ({ onClose }: { onClose: () => void }) => {
   const { spins, playSpin } = useGameStore();
   const [isSpinning, setIsSpinning] = useState(false);
   const [resultMsg, setResultMsg] = useState("NHẤN ĐỂ QUAY!");
-
+  const [timeLeft, setTimeLeft] = useState("");
+  const cooldown = 24 * 60 * 60 * 1000;
   // Tính xem còn bao nhiêu lượt dựa trên time
   const now = Date.now();
-  const actualSpins =
-    now - spins.lastReset > 24 * 60 * 60 * 1000 ? 5 : spins.count;
+  const actualSpins = now - spins.lastReset > cooldown ? 5 : spins.count;
+
+  useEffect(() => {
+    if (actualSpins <= 0) {
+      const timer = setInterval(() => {
+        const timePassed = Date.now() - spins.lastReset;
+        if (timePassed >= cooldown) {
+          setTimeLeft(""); // Đã hồi xong, kệ nó, actualSpins sẽ tự nhảy lên 5
+        } else {
+          // Tính toán số giờ, phút, giây còn lại
+          const diff = new Date(cooldown - timePassed);
+          // Dùng padStart(2, '0') để ép nó hiển thị dạng 09 thay vì 9
+          const hours = diff.getUTCHours();
+          const mins = diff.getUTCMinutes().toString().padStart(2, "0");
+          const secs = diff.getUTCSeconds().toString().padStart(2, "0");
+          setTimeLeft(`${hours}h ${mins}m ${secs}s`);
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [actualSpins, spins.lastReset]);
 
   const handleSpin = () => {
     if (actualSpins <= 0 || isSpinning) return;
@@ -572,7 +592,6 @@ export const SpinModal = ({ onClose }: { onClose: () => void }) => {
     setIsSpinning(true);
     setResultMsg("ĐANG QUAY...");
 
-    // Hiệu ứng delay giả lập vòng quay chạy
     setTimeout(() => {
       const result = playSpin();
       if (result) {
@@ -583,7 +602,7 @@ export const SpinModal = ({ onClose }: { onClose: () => void }) => {
         }
       }
       setIsSpinning(false);
-    }, 1500); // Quay trong 1.5 giây
+    }, 1500);
   };
 
   return (
@@ -638,7 +657,7 @@ export const SpinModal = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         <div
-          style={{ color: "white", fontWeight: "bold", marginBottom: "15px" }}
+          style={{ color: "white", fontWeight: "bold", marginBottom: "5px" }}
         >
           Lượt quay còn lại:{" "}
           <span
@@ -649,6 +668,22 @@ export const SpinModal = ({ onClose }: { onClose: () => void }) => {
           >
             {actualSpins}/5
           </span>
+        </div>
+
+        {/* KHU VỰC HIỂN THỊ ĐẾM NGƯỢC */}
+        <div style={{ height: "25px", marginBottom: "15px" }}>
+          {actualSpins <= 0 && (
+            <div
+              style={{
+                color: "#fbbf24",
+                fontSize: "15px",
+                fontWeight: "bold",
+                textShadow: "1px 1px 2px black",
+              }}
+            >
+              Hồi lại sau: {timeLeft}
+            </div>
+          )}
         </div>
 
         <button
@@ -673,7 +708,6 @@ export const SpinModal = ({ onClose }: { onClose: () => void }) => {
           {actualSpins <= 0 ? "HẾT LƯỢT" : "QUAY NGAY"}
         </button>
 
-        {/* Thêm CSS quay vòng tròn */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
